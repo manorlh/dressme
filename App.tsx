@@ -58,11 +58,25 @@ const theme = createTheme({
     Button: {
       raised: true,
       buttonStyle: {
-        borderRadius: 12,
+        borderRadius: 16,
         paddingVertical: 12,
+        borderWidth: 0,
       },
       containerStyle: {
-        borderRadius: 12,
+        borderRadius: 16,
+        overflow: 'hidden',
+      },
+      titleStyle: {
+        fontSize: 16,
+        fontWeight: '600',
+        letterSpacing: 0.5,
+      },
+      // Outline button specific styles
+      outline: {
+        buttonStyle: {
+          borderWidth: 2,
+          backgroundColor: 'transparent',
+        },
       },
     },
     Card: {
