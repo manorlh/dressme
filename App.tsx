@@ -7,9 +7,12 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { TryOnScreen } from './src/screens/TryOnScreen';
 import { WardrobeScreen } from './src/screens/WardrobeScreen';
+import { LoginScreen } from './src/screens/LoginScreen';
 import { Icon } from '@rneui/themed';
-import { Platform, useColorScheme } from 'react-native';
+import { Platform, useColorScheme, ActivityIndicator, View, TouchableOpacity } from 'react-native';
 import * as Updates from 'expo-updates';
+import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import 'react-native-url-polyfill/auto';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -117,6 +120,7 @@ const theme = createTheme({
 function TabNavigator() {
   const { theme: currentTheme } = useTheme();
   const colorScheme = useColorScheme();
+  const { signOut } = useAuth();
 
   const onReload = async () => {
     try {
@@ -143,7 +147,7 @@ function TabNavigator() {
           elevation: 5,
         },
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
+          let iconName: string = 'home';
           if (route.name === 'HomeTab') {
             iconName = 'home';
           } else if (route.name === 'TryOnTab') {
@@ -152,6 +156,8 @@ function TabNavigator() {
             iconName = 'closet';
           } else if (route.name === 'ReloadTab') {
             iconName = 'reload';
+          } else if (route.name === 'ProfileTab') {
+            iconName = 'account';
           }
 
           return (
@@ -187,22 +193,44 @@ function TabNavigator() {
         component={WardrobeScreen}
         options={{ title: 'Wardrobe' }}
       />
+      <Tab.Screen
+        name="ProfileTab"
+        component={HomeScreen}
+        options={{
+          title: 'Profile',
+          tabBarButton: () => (
+            <TouchableOpacity
+              style={{ padding: 15 }}
+              onPress={signOut}
+            >
+              <Icon
+                name="account"
+                type="material-community"
+                size={25}
+                color={currentTheme.colors.primary}
+              />
+            </TouchableOpacity>
+          )
+        }}
+      />
       {__DEV__ && (
         <Tab.Screen
           name="ReloadTab"
           component={HomeScreen}
           options={{ 
             title: 'Reload',
-            tabBarButton: (props) => (
-              <Icon
-                {...props}
-                name="reload"
-                type="material-community"
-                size={25}
-                color={currentTheme.colors.primary}
-                containerStyle={{ padding: 15 }}
+            tabBarButton: () => (
+              <TouchableOpacity
+                style={{ padding: 15 }}
                 onPress={onReload}
-              />
+              >
+                <Icon
+                  name="reload"
+                  type="material-community"
+                  size={25}
+                  color={currentTheme.colors.primary}
+                />
+              </TouchableOpacity>
             )
           }}
         />
@@ -211,21 +239,43 @@ function TabNavigator() {
   );
 }
 
+function Navigation() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  return (
+    <NavigationContainer>
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+          animation: 'slide_from_right',
+        }}
+      >
+        {user ? (
+          <Stack.Screen name="MainTabs" component={TabNavigator} />
+        ) : (
+          <Stack.Screen name="Login" component={LoginScreen} />
+        )}
+      </Stack.Navigator>
+      <StatusBar style="light" />
+    </NavigationContainer>
+  );
+}
+
 export default function App() {
   return (
     <SafeAreaProvider>
-      <ThemeProvider theme={theme} useDark={true}>
-        <NavigationContainer>
-          <Stack.Navigator
-            screenOptions={{
-              headerShown: false,
-              animation: 'slide_from_right',
-            }}
-          >
-            <Stack.Screen name="MainTabs" component={TabNavigator} />
-          </Stack.Navigator>
-          <StatusBar style="light" />
-        </NavigationContainer>
+      <ThemeProvider theme={theme}>
+        <AuthProvider>
+          <Navigation />
+        </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );
