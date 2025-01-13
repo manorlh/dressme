@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { Icon, Text, useTheme } from '@rneui/themed';
-import { Camera } from 'expo-camera';
+import { Camera, CameraType } from 'expo-camera';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
@@ -13,11 +13,18 @@ interface CameraViewProps {
 
 export const CameraView = ({ onCapture, onClose }: CameraViewProps) => {
   const { theme } = useTheme();
-  const [type, setType] = useState('back');
-  const [permission, requestPermission] = Camera.useCameraPermissions();
-  const cameraRef = useRef<Camera>(null);
+  const [type, setType] = useState(CameraType.back);
+  const [permission, setPermission] = useState<boolean | null>(null);
+  const cameraRef = useRef<any>(null);
 
-  if (!permission) {
+  useEffect(() => {
+    (async () => {
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      setPermission(status === 'granted');
+    })();
+  }, []);
+
+  if (permission === null) {
     return (
       <View style={styles.container}>
         <Text>Requesting camera permission...</Text>
@@ -25,7 +32,7 @@ export const CameraView = ({ onCapture, onClose }: CameraViewProps) => {
     );
   }
 
-  if (!permission.granted) {
+  if (permission === false) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <Text style={{ color: theme.colors.grey0, marginBottom: 20 }}>
@@ -33,7 +40,10 @@ export const CameraView = ({ onCapture, onClose }: CameraViewProps) => {
         </Text>
         <TouchableOpacity
           style={[styles.button, { backgroundColor: theme.colors.primary }]}
-          onPress={requestPermission}
+          onPress={async () => {
+            const { status } = await Camera.requestCameraPermissionsAsync();
+            setPermission(status === 'granted');
+          }}
         >
           <Text style={{ color: 'white' }}>Grant Permission</Text>
         </TouchableOpacity>
@@ -42,16 +52,20 @@ export const CameraView = ({ onCapture, onClose }: CameraViewProps) => {
   }
 
   const toggleCameraType = () => {
-    setType(current => (current === 'back' ? 'front' : 'back'));
+    setType(current => (current === CameraType.back ? CameraType.front : CameraType.back));
   };
 
   const takePicture = async () => {
     if (cameraRef.current) {
-      const photo = await cameraRef.current.takePictureAsync({
-        quality: 1,
-        base64: false,
-      });
-      onCapture(photo.uri);
+      try {
+        const photo = await cameraRef.current.takePictureAsync({
+          quality: 1,
+          base64: false,
+        });
+        onCapture(photo.uri);
+      } catch (error) {
+        console.error('Error taking picture:', error);
+      }
     }
   };
 
@@ -60,7 +74,7 @@ export const CameraView = ({ onCapture, onClose }: CameraViewProps) => {
       <Camera
         ref={cameraRef}
         style={styles.camera}
-        type={type as any}
+        type={type}
       >
         <View style={styles.overlay}>
           <View style={styles.topBar}>
